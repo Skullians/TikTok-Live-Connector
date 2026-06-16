@@ -12,4 +12,5 @@ export default defineConfig({
     target: 'node20',
     sourcemap: true,
     fixedExtension: false,
+    noExternal: [/^tiktok-live-proto(\/|$)/],
 });

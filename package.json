@@ -23,6 +23,7 @@
         "node": ">=20.0.0"
     },
     "scripts": {
+        "prepare": "npm run build",
         "build": "tsdown && npm run build:copy-package",
         "build:copy-package": "cpx package.json dist && cpx LICENSE dist",
         "typecheck": "tsc --noEmit",
