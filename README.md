@@ -1,12 +1,18 @@
-# TikTok-Live-Connector
+# TikTok LIVE API for Node.JS (Unofficial)
 
-A Node.js library to receive live stream events such as comments and gifts in realtime
-from [TikTok LIVE](https://www.tiktok.com/live) by connecting to TikTok's internal Webcast push service.
-This package includes a wrapper that connects to the Webcast service using just the username (`@uniqueId`).
-This allows you to connect to your own live chat as well as the live chat of other streamers. No credentials are
-required. Besides [Chat Comments](#chat), other events such
-as [Members Joining](#member), [Gifts](#gift), [Subscriptions](#subscribe), [Viewers](#roomuser), [Follows](#social), [Shares](#social), [Questions](#questionnew), [Likes](#like)
-and [Battles](#linkmicbattle) can be tracked.
+[TikTok LIVE API](https://www.eulerstream.com/) Client for Node.JS (Unofficial, Unaffiliated with ByteDance Ltd.)
+
+Connect to any [TikTok LIVE](https://www.tiktok.com/live) stream and receive real-time chat messages,
+gifts, likes, follows, shares, viewer counts and battles using just a creator's username (`@uniqueId`).
+No login, credentials or app registration are required.
+
+TikTokLiveConnector reads TikTok's internal Webcast push service directly, which makes it the foundation for
+TikTok chat bots, gift trackers, OBS overlays, donation alerts, moderation tools and livestream analytics.
+It works for your own live chat and for any other creator's.
+
+Tracked events include [Chat Comments](#chat), [Members Joining](#member), [Gifts](#gift),
+[Viewers](#roomuser), [Follows](#social), [Shares](#social), [Questions](#questionnew),
+[Likes](#like), [Super Fans](#superfan) and [Battles](#linkmicbattle).
 
 [![Discord](https://img.shields.io/discord/977648006063091742?logo=discord&label=TikTokLive%20Discord&labelColor=%23171717&color=%231877af)](https://discord.gg/N3KSxzvDX8)
 ![Connections](https://api.eulerstream.com/analytics/pips?client=ttlive-node)
@@ -36,6 +42,7 @@ and [Battles](#linkmicbattle) can be tracked.
 ### Table of Contents
 
 - [Getting Started](#getting-started)
+- [Run with Docker](#run-with-docker)
 - [Params and Options](#params-and-options)
 - [Methods](#methods)
 - [Properties](#properties)
@@ -91,7 +98,7 @@ To create a new `TikTokLiveConnection` object the following parameters can be sp
 | Param Name | Required | Description |
 |------------|----------|-------------|
 | `uniqueId` | Yes | The unique username of the broadcaster. You can find this name in the URL.<br>Example: `https://www.tiktok.com/@officialgeilegisela/live` becomes `officialgeilegisela`. The leading `@` and the full URL form are also accepted. |
-| `options`  | No | Optional connection properties. Defaults are applied when a value is not specified.<br><br>`signApiKey` (default: `undefined`)<br>Euler Stream API key. When provided, it is written to the global `SignConfig.apiKey` before the underlying Euler client is created. Ignored when `eulerApiInstance` is passed.<br><br>`eulerApiInstance` (default: `undefined`)<br>Pre-built `EulerStreamApiClient` to use for all sign-server traffic. Takes precedence over `signApiKey`.<br><br>`session` (default: `undefined`)<br>Authenticated session bundle. Pass `session.cookie` to seed the cookie jar with `sessionid` and `tt-target-idc`, and/or `session.oAuthToken` to send an OAuth token to the sign server. Required when `authenticateWs` or `useMobile` is true. See [Authenticated Connection](#authenticated-connection).<br><br>`authenticateWs` (default: `false`)<br>Forward the session cookies or OAuth token to the sign server so the WebSocket is authenticated. Disabled by default since signing is done by a third-party service; enabling it sends your session credentials to that service.<br><br>`useMobile` (default: `false`)<br>Use the mobile WebSocket flow. Implies `authenticateWs: true` and requires `session.cookie`.<br><br>`processInitialData` (default: `true`)<br>Decode and emit the message batch returned in the initial sign response (recent chat history etc.).<br><br>`fetchRoomInfoOnConnect` (default: `true`)<br>Fetch room info during connect. If the streamer is not currently live the connect rejects with `UserOfflineError`. The fetched info is stored on `connection.roomInfo` and is also accessible via [`fetchRoomInfo()`](#methods).<br><br>`enableExtendedGiftInfo` (default: `false`)<br>Fetch the room gift list during connect so `WebcastGiftMessage` events carry an `extendedGiftInfo` field with name, cost, and image data.<br><br>`clientPresets` (default: randomized)<br>Pre-built `{ device, screen, location }` presets. Defaults to a freshly randomized set from `getRandomPresets()`.<br><br>`webClientOptions` (default: `{}`)<br>Extra options forwarded to the underlying [`got`](https://github.com/sindresorhus/got) HTTP client (proxy agent, timeout, etc.). Headers and search params from this object are merged with the defaults; transport-only fields are passed through. See [Proxied Connection](#proxied-connection).<br><br>`wsClientOptions` (default: `{}`)<br>Extra options forwarded to the underlying [`ws`](https://github.com/websockets/ws) WebSocket client. See [Proxied Connection](#proxied-connection).<br><br>`webConfigOverrides` (default: `{}`)<br>Partial overrides for the resolved `WebcastWebConfigDefaults` used by the HTTP client. Use this to customize `DEFAULT_HTTP_CLIENT_PARAMS`, `DEFAULT_HTTP_CLIENT_HEADERS`, etc.<br><br>`wsConfigOverrides` (default: `{}`)<br>Partial overrides for the resolved `WebcastWebSocketConfigDefaults` used by the WebSocket client. Use this to customize `DEFAULT_WS_CLIENT_PARAMS` or `DEFAULT_WS_CLIENT_HEADERS`. |
+| `options`  | No | Optional connection properties. Defaults are applied when a value is not specified.<br><br>`signApiKey` (default: `undefined`)<br>Euler Stream API key. When provided, it is written to the global `SignConfig.apiKey` before the underlying Euler client is created. Ignored when `eulerApiInstance` is passed.<br><br>`eulerApiInstance` (default: `undefined`)<br>Pre-built `EulerStreamApiClient` to use for all sign-server traffic. Takes precedence over `signApiKey`.<br><br>`session` (default: `undefined`)<br>Authenticated session bundle. Pass `session.cookie` to seed the cookie jar with `sessionid` and `tt-target-idc`, and/or `session.oAuthToken` to send an OAuth token to the sign server. Required when `authenticateWs` or `useMobile` is true. See [Authenticated Connection](#authenticated-connection).<br><br>`authenticateWs` (default: `false`)<br>Forward the session cookies or OAuth token to the sign server so the WebSocket is authenticated. Disabled by default since signing is done by a third-party service; enabling it sends your session credentials to that service.<br><br>`useMobile` (default: `false`)<br>Use the mobile WebSocket flow. Requires `authenticateWs: true` and `session.cookie`; connecting with `useMobile` but without `authenticateWs` throws a `TypeError`.<br><br>`processInitialData` (default: `true`)<br>Decode and emit the message batch returned in the initial sign response (recent chat history etc.).<br><br>`fetchRoomInfoOnConnect` (default: `true`)<br>Fetch room info during connect. If the streamer is not currently live the connect rejects with `UserOfflineError`. The fetched info is stored on `connection.roomInfo` and is also accessible via [`fetchRoomInfo()`](#methods).<br><br>`enableExtendedGiftInfo` (default: `false`)<br>Fetch the room gift list during connect so `WebcastGiftMessage` events carry an `extendedGiftInfo` field with name, cost, and image data.<br><br>`clientPresets` (default: randomized)<br>Pre-built `{ device, screen, location }` presets. Defaults to a freshly randomized set from `getRandomPresets()`.<br><br>`webClientOptions` (default: `{}`)<br>Extra options forwarded to the underlying [`got`](https://github.com/sindresorhus/got) HTTP client (proxy agent, timeout, etc.). Headers and search params from this object are merged with the defaults; transport-only fields are passed through. See [Proxied Connection](#proxied-connection).<br><br>`wsClientOptions` (default: `{}`)<br>Extra options forwarded to the underlying [`ws`](https://github.com/websockets/ws) WebSocket client. See [Proxied Connection](#proxied-connection).<br><br>`webConfigOverrides` (default: `{}`)<br>Partial overrides for the resolved `WebcastWebConfigDefaults` used by the HTTP client. Use this to customize `DEFAULT_HTTP_CLIENT_PARAMS`, `DEFAULT_HTTP_CLIENT_HEADERS`, etc.<br><br>`wsConfigOverrides` (default: `{}`)<br>Partial overrides for the resolved `WebcastWebSocketConfigDefaults` used by the WebSocket client. Use this to customize `DEFAULT_WS_CLIENT_PARAMS` or `DEFAULT_WS_CLIENT_HEADERS`. |
 
 #### Example Options
 
@@ -1300,6 +1307,45 @@ await connection.sendMessage('Hello world!');
 console.log('Message sent!');
 ```
 
+## Frequently Asked Questions
+
+### Is there an official TikTok LIVE API?
+
+TikTok does not offer a public official API for reading livestream events. TikTokLiveConnector is an unofficial,
+open-source TikTok LIVE API client that reads the same Webcast data available to any viewer of a stream.
+
+### How do I read TikTok live chat messages in Node.js?
+
+Install with `npm i tiktok-live-connector`, create a `TikTokLiveConnection` with the streamer's `@uniqueId`, and
+listen for `WebcastEvent.CHAT`. See [Getting Started](#getting-started) above — it takes about ten lines of code.
+
+### Can I track TikTok gifts, likes and viewer counts in real time?
+
+Yes. [`GIFT`](#gift) (with streak handling), [`LIKE`](#like) and [`ROOM_USER`](#roomuser) deliver gifts, likes and
+live viewer counts as they happen, alongside follows, shares, subscriptions, questions and battles.
+
+### Does it work without logging in?
+
+Yes. No credentials, cookies or app registration are required to *read* a public livestream. Authentication is only
+needed to *send* chat messages, which additionally requires a sign API key — see [Send Messages](#send-messages).
+
+### Is it free?
+
+Yes, the library is free and open source. Connecting requires a signed WebSocket token, provided by
+[Euler Stream](https://www.eulerstream.com/) with free community rate limits; an API key raises those limits.
+
+### Is it production-ready?
+
+The library is a reverse-engineering project and TikTok can change the Webcast protocol without notice. For
+workloads that need an uptime guarantee, use the managed
+[TikTok LIVE WebSocket API](https://www.eulerstream.com/websockets), which handles signing, scaling and protocol
+drift for you.
+
+### Is this available in other languages?
+
+Yes — see [Do you prefer other programming languages?](#do-you-prefer-other-programming-languages) for the Python,
+Java, Go and C# ports.
+
 ## Contributors
 
 * **Zerody** - *Initial Reverse-Engineering and Protobuf-Decoding* - [Zerody](https://github.com/zerodytrash/)
@@ -1307,4 +1353,4 @@ console.log('Message sent!');
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under a modified AGPL License. See the [LICENSE](LICENSE) file for details.
